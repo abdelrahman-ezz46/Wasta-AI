@@ -1,0 +1,27 @@
+# Build artifacts
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+*.user
+*.suo
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Secrets - never commit real credentials.
+# Provide values via environment variables or `dotnet user-secrets` instead.
+.env
+.env.*
+!.env.example
+appsettings.Development.json
+appsettings.Local.json
+appsettings.Production.json
+secrets.json
+
+# OS / editor
+.DS_Store
+.vs/
+.vscode/
+.idea/

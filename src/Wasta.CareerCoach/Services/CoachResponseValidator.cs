@@ -17,16 +17,33 @@ public sealed record CoachValidationResult(bool IsValid, CoachPlanResponse? Resp
 /// </summary>
 public static partial class CoachResponseValidator
 {
-    private static readonly string[] ForbiddenPhrases =
-    [
-        "hire", "hired", "salary", "job offer", "you will get",
-    ];
-
     [GeneratedRegex(@"```(?:json)?\s*|\s*```", RegexOptions.IgnoreCase)]
     private static partial Regex FenceRegex();
 
-    [GeneratedRegex(@"\d+(\.\d+)?\s*%")]
-    private static partial Regex PercentageRegex();
+    /// <summary>
+    /// Rule 4 (never mention the numeric score/percentage/percentile) covers
+    /// more than the "%" symbol. A model that writes "you scored 41 percent"
+    /// or "41 out of 100" has leaked the score just as surely, so all the
+    /// spellings are rejected, not only the punctuation.
+    /// </summary>
+    /// The "\D{0,15}" gaps are deliberately narrow and digit-free: they catch
+    /// "you scored 41" and "your score of 41" while leaving legitimate study
+    /// advice like "score each model and compare 3 runs" alone.
+    [GeneratedRegex(
+        @"\d+(\.\d+)?\s*%|percentile|per\s?cent(s|age)?\b|\b\d+\s*out\s+of\s+\d+|\b\d+\s*/\s*\d{2,}|\bscor(e|ed|es)\b\D{0,15}\d",
+        RegexOptions.IgnoreCase)]
+    private static partial Regex ScoreLeakRegex();
+
+    /// <summary>
+    /// Rule 2 (never touch employment prospects). Word-boundary anchored:
+    /// a plain substring match rejects legitimate text - "Hampshire" and
+    /// "Yorkshire" both contain "hire" - which silently burns the single
+    /// retry and fails an otherwise good plan.
+    /// </summary>
+    [GeneratedRegex(
+        @"\b(hire[sd]?|hiring|salary|salaries|job offers?)\b|\byou will get\b",
+        RegexOptions.IgnoreCase)]
+    private static partial Regex ProhibitedEmploymentRegex();
 
     public static CoachValidationResult Validate(string rawResponse)
     {
@@ -89,12 +106,12 @@ public static partial class CoachResponseValidator
             }
         }
 
-        if (PercentageRegex().IsMatch(stripped) || stripped.Contains("percentile", StringComparison.OrdinalIgnoreCase))
+        if (ScoreLeakRegex().IsMatch(stripped))
         {
             failures.Add("leaked_score_reference");
         }
 
-        if (ForbiddenPhrases.Any(phrase => stripped.Contains(phrase, StringComparison.OrdinalIgnoreCase)))
+        if (ProhibitedEmploymentRegex().IsMatch(stripped))
         {
             failures.Add("prohibited_hiring_language");
         }

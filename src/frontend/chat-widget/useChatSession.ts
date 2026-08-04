@@ -3,6 +3,7 @@ import type { ChatMessage, ChatMessageResponse, CreateSessionResponse, SendMessa
 
 const VISITOR_ID_KEY = "wasta.chat.visitorId";
 const SESSION_ID_KEY = "wasta.chat.sessionId";
+const VISITOR_ID_HEADER = "X-Wasta-Visitor-Id";
 
 function getOrCreateVisitorId(): string {
   let id = localStorage.getItem(VISITOR_ID_KEY);
@@ -11,6 +12,17 @@ function getOrCreateVisitorId(): string {
     localStorage.setItem(VISITOR_ID_KEY, id);
   }
   return id;
+}
+
+/**
+ * Anonymous sessions prove ownership by echoing back the visitor id they
+ * were created with - the session id alone isn't accepted, since it travels
+ * in the URL path and ends up in server and proxy logs. Logged-in students
+ * are authorized server-side from their auth instead, so this header is
+ * simply ignored for them.
+ */
+function sessionHeaders(extra?: Record<string, string>): Record<string, string> {
+  return { [VISITOR_ID_HEADER]: getOrCreateVisitorId(), ...extra };
 }
 
 let nextLocalId = 0;
@@ -31,7 +43,9 @@ export function useChatSession() {
       if (existingSessionId) {
         sessionIdRef.current = existingSessionId;
         try {
-          const response = await fetch(`/api/chat/sessions/${existingSessionId}/messages`);
+          const response = await fetch(`/api/chat/sessions/${existingSessionId}/messages`, {
+            headers: sessionHeaders(),
+          });
           if (response.ok) {
             const history = (await response.json()) as ChatMessageResponse[];
             if (!cancelled) {
@@ -78,7 +92,7 @@ export function useChatSession() {
     try {
       const response = await fetch(`/api/chat/sessions/${sessionId}/messages`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: sessionHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ message: userMessage.content }),
       });
 

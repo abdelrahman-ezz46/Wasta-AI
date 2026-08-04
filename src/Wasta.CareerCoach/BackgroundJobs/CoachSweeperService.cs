@@ -18,6 +18,12 @@ namespace Wasta.CareerCoach.BackgroundJobs;
 public class CoachSweeperService : BackgroundService
 {
     private static readonly TimeSpan SweepInterval = TimeSpan.FromMinutes(10);
+
+    /// <summary>How old a still-Pending row must be before the sweeper treats it
+    /// as abandoned rather than in flight. Comfortably longer than a
+    /// generation attempt (30s provider timeout, at most two tries).</summary>
+    internal static readonly TimeSpan StalePendingAfter = TimeSpan.FromMinutes(15);
+
     private const int MaxAttemptCount = 3;
     private const int MaxPerPass = 10;
 
@@ -47,14 +53,23 @@ public class CoachSweeperService : BackgroundService
         } while (await timer.WaitForNextTickAsync(stoppingToken));
     }
 
-    private async Task SweepAsync(CancellationToken ct)
+    internal async Task SweepAsync(CancellationToken ct)
     {
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<CoachDbContext>();
         var generationService = scope.ServiceProvider.GetRequiredService<CoachGenerationService>();
 
+        // Stale Pending rows matter as much as Failed ones. A row is left
+        // Pending whenever the queue was full at submit time or the process
+        // restarted mid-generation; nothing else ever revisits it, so
+        // without this the coach card would be permanently missing for that
+        // attempt. The age threshold keeps the sweeper from racing a
+        // generation that's simply still in flight.
+        var stalePendingBefore = DateTimeOffset.UtcNow - StalePendingAfter;
+
         var candidates = await db.StudentCoachPlans
-            .Where(p => p.Status == CoachStatus.Failed && p.AttemptCount < MaxAttemptCount)
+            .Where(p => (p.Status == CoachStatus.Failed && p.AttemptCount < MaxAttemptCount)
+                || (p.Status == CoachStatus.Pending && p.CreatedAt < stalePendingBefore))
             .OrderBy(p => p.CreatedAt)
             .Take(MaxPerPass)
             .Select(p => p.AttemptId)

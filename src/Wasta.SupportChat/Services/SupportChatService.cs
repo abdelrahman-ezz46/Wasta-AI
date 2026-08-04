@@ -37,27 +37,44 @@ public class SupportChatService
         _logger = logger;
     }
 
-    public async Task<ChatSession> CreateSessionAsync(int? studentId, string? visitorId, CancellationToken ct)
+    /// <summary>Anonymous sessions REQUIRE a visitor id - it's what the caller
+    /// later proves ownership with. Returns null if an anonymous caller
+    /// supplied none, rather than creating a session nobody can reach.</summary>
+    public async Task<ChatSession?> CreateSessionAsync(int? studentId, string? visitorId, CancellationToken ct)
     {
+        if (studentId is null && string.IsNullOrWhiteSpace(visitorId))
+        {
+            return null;
+        }
+
         var session = new ChatSession { StudentId = studentId, VisitorId = visitorId };
         _db.ChatSessions.Add(session);
         await _db.SaveChangesAsync(ct);
         return session;
     }
 
-    public async Task<IReadOnlyList<ChatMessage>> GetHistoryAsync(Guid sessionPublicId, CancellationToken ct)
+    public async Task<IReadOnlyList<ChatMessage>> GetHistoryAsync(Guid sessionPublicId, ChatCaller caller, CancellationToken ct)
     {
         var session = await _db.ChatSessions
             .Include(s => s.Messages)
             .AsNoTracking()
             .FirstOrDefaultAsync(s => s.PublicId == sessionPublicId, ct);
 
-        return session is null
-            ? []
-            : session.Messages.OrderBy(m => m.CreatedAt).ToList();
+        if (session is null)
+        {
+            return [];
+        }
+
+        if (!caller.CanAccess(session))
+        {
+            _logger.LogWarning("Rejected unauthorized history read for session {SessionId}", sessionPublicId);
+            return [];
+        }
+
+        return session.Messages.OrderBy(m => m.CreatedAt).ToList();
     }
 
-    public async Task<SendMessageResult> SendMessageAsync(Guid sessionPublicId, string? userMessage, CancellationToken ct)
+    public async Task<SendMessageResult> SendMessageAsync(Guid sessionPublicId, ChatCaller caller, string? userMessage, CancellationToken ct)
     {
         var session = await _db.ChatSessions
             .Include(s => s.Messages)
@@ -66,6 +83,12 @@ public class SupportChatService
         if (session is null)
         {
             return new SendMessageResult(sessionPublicId, string.Empty, ChatSendOutcome.SessionNotFound);
+        }
+
+        if (!caller.CanAccess(session))
+        {
+            _logger.LogWarning("Rejected unauthorized send for session {SessionId}", sessionPublicId);
+            return new SendMessageResult(sessionPublicId, string.Empty, ChatSendOutcome.NotAuthorized);
         }
 
         var trimmed = userMessage?.Trim() ?? string.Empty;

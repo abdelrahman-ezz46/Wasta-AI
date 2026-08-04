@@ -18,6 +18,9 @@ namespace Wasta.SupportChat.Tests;
 /// </summary>
 public class SupportChatMemoryAndJobsTests : IDisposable
 {
+
+    private static ChatCaller CallerFor(ChatSession s) => new(s.StudentId, s.VisitorId);
+    private static readonly ChatCaller AnyCaller = new(null, "any-visitor");
     private readonly string _promptPath;
     private readonly string _knowledgePath;
 
@@ -73,11 +76,11 @@ public class SupportChatMemoryAndJobsTests : IDisposable
             .EnqueueResponse("Sure, happy to continue.");
         var service = BuildService(db, provider);
 
-        var firstSession = await service.CreateSessionAsync(studentId: 1, visitorId: null, CancellationToken.None);
-        await service.SendMessageAsync(firstSession.PublicId, "What is the Wasta Score?", CancellationToken.None);
+        var firstSession = (await service.CreateSessionAsync(studentId: 1, visitorId: null, CancellationToken.None))!;
+        await service.SendMessageAsync(firstSession.PublicId, CallerFor(firstSession), "What is the Wasta Score?", CancellationToken.None);
 
-        var secondSession = await service.CreateSessionAsync(studentId: 1, visitorId: null, CancellationToken.None);
-        await service.SendMessageAsync(secondSession.PublicId, "Can you continue helping me?", CancellationToken.None);
+        var secondSession = (await service.CreateSessionAsync(studentId: 1, visitorId: null, CancellationToken.None))!;
+        await service.SendMessageAsync(secondSession.PublicId, CallerFor(secondSession), "Can you continue helping me?", CancellationToken.None);
 
         Assert.Contains(provider.LastTurns!, t => t.Role == "user" && t.Content == "What is the Wasta Score?");
         Assert.Contains(provider.LastTurns!, t => t.Role == "assistant" && t.Content == "The Wasta Score is deterministic.");
@@ -92,11 +95,11 @@ public class SupportChatMemoryAndJobsTests : IDisposable
             .EnqueueResponse("Second answer.");
         var service = BuildService(db, provider);
 
-        var firstSession = await service.CreateSessionAsync(studentId: null, visitorId: "same-visitor", CancellationToken.None);
-        await service.SendMessageAsync(firstSession.PublicId, "A private first question", CancellationToken.None);
+        var firstSession = (await service.CreateSessionAsync(studentId: null, visitorId: "same-visitor", CancellationToken.None))!;
+        await service.SendMessageAsync(firstSession.PublicId, CallerFor(firstSession), "A private first question", CancellationToken.None);
 
-        var secondSession = await service.CreateSessionAsync(studentId: null, visitorId: "same-visitor", CancellationToken.None);
-        await service.SendMessageAsync(secondSession.PublicId, "A new question", CancellationToken.None);
+        var secondSession = (await service.CreateSessionAsync(studentId: null, visitorId: "same-visitor", CancellationToken.None))!;
+        await service.SendMessageAsync(secondSession.PublicId, CallerFor(secondSession), "A new question", CancellationToken.None);
 
         Assert.DoesNotContain(provider.LastTurns!, t => t.Content == "A private first question");
         Assert.Single(provider.LastTurns!);
@@ -111,11 +114,11 @@ public class SupportChatMemoryAndJobsTests : IDisposable
             .EnqueueResponse("Answer for student B.");
         var service = BuildService(db, provider);
 
-        var studentASession = await service.CreateSessionAsync(studentId: 1, visitorId: null, CancellationToken.None);
-        await service.SendMessageAsync(studentASession.PublicId, "Student A's secret question", CancellationToken.None);
+        var studentASession = (await service.CreateSessionAsync(studentId: 1, visitorId: null, CancellationToken.None))!;
+        await service.SendMessageAsync(studentASession.PublicId, CallerFor(studentASession), "Student A's secret question", CancellationToken.None);
 
-        var studentBSession = await service.CreateSessionAsync(studentId: 2, visitorId: null, CancellationToken.None);
-        await service.SendMessageAsync(studentBSession.PublicId, "Student B's question", CancellationToken.None);
+        var studentBSession = (await service.CreateSessionAsync(studentId: 2, visitorId: null, CancellationToken.None))!;
+        await service.SendMessageAsync(studentBSession.PublicId, CallerFor(studentBSession), "Student B's question", CancellationToken.None);
 
         Assert.DoesNotContain(provider.LastTurns!, t => t.Content.Contains("Student A"));
     }
@@ -129,13 +132,13 @@ public class SupportChatMemoryAndJobsTests : IDisposable
             .EnqueueResponse("Final answer");
         var service = BuildService(db, provider, crossSessionMemoryTurns: 2);
 
-        var firstSession = await service.CreateSessionAsync(studentId: 1, visitorId: null, CancellationToken.None);
-        await service.SendMessageAsync(firstSession.PublicId, "Q1", CancellationToken.None);
-        await service.SendMessageAsync(firstSession.PublicId, "Q2", CancellationToken.None);
-        await service.SendMessageAsync(firstSession.PublicId, "Q3", CancellationToken.None);
+        var firstSession = (await service.CreateSessionAsync(studentId: 1, visitorId: null, CancellationToken.None))!;
+        await service.SendMessageAsync(firstSession.PublicId, CallerFor(firstSession), "Q1", CancellationToken.None);
+        await service.SendMessageAsync(firstSession.PublicId, CallerFor(firstSession), "Q2", CancellationToken.None);
+        await service.SendMessageAsync(firstSession.PublicId, CallerFor(firstSession), "Q3", CancellationToken.None);
 
-        var secondSession = await service.CreateSessionAsync(studentId: 1, visitorId: null, CancellationToken.None);
-        await service.SendMessageAsync(secondSession.PublicId, "New question", CancellationToken.None);
+        var secondSession = (await service.CreateSessionAsync(studentId: 1, visitorId: null, CancellationToken.None))!;
+        await service.SendMessageAsync(secondSession.PublicId, CallerFor(secondSession), "New question", CancellationToken.None);
 
         // Only the 2 most recent prior messages (CrossSessionMemoryTurns=2) plus the new one.
         Assert.Equal(3, provider.LastTurns!.Count);
@@ -153,8 +156,8 @@ public class SupportChatMemoryAndJobsTests : IDisposable
             new JobListing("Data Analyst", "Acme Corp", "Data & AI", ["SQL", "Python"], "Riyadh", "https://example.com/jobs/1"));
         var service = BuildService(db, provider, jobListingProvider: jobs);
 
-        var session = await service.CreateSessionAsync(studentId: 1, visitorId: null, CancellationToken.None);
-        await service.SendMessageAsync(session.PublicId, "Any data jobs open?", CancellationToken.None);
+        var session = (await service.CreateSessionAsync(studentId: 1, visitorId: null, CancellationToken.None))!;
+        await service.SendMessageAsync(session.PublicId, CallerFor(session), "Any data jobs open?", CancellationToken.None);
 
         Assert.Contains("OPEN_OPPORTUNITIES", provider.LastSystemPrompt);
         Assert.Contains("Data Analyst", provider.LastSystemPrompt);
@@ -168,8 +171,8 @@ public class SupportChatMemoryAndJobsTests : IDisposable
         var provider = new FakeAiProvider("groq").EnqueueResponse("Here's how scoring works.");
         var service = BuildService(db, provider); // default NullJobListingProvider
 
-        var session = await service.CreateSessionAsync(studentId: null, visitorId: "v1", CancellationToken.None);
-        await service.SendMessageAsync(session.PublicId, "How does scoring work?", CancellationToken.None);
+        var session = (await service.CreateSessionAsync(studentId: null, visitorId: "v1", CancellationToken.None))!;
+        await service.SendMessageAsync(session.PublicId, CallerFor(session), "How does scoring work?", CancellationToken.None);
 
         Assert.DoesNotContain("OPEN_OPPORTUNITIES", provider.LastSystemPrompt);
     }
@@ -182,8 +185,8 @@ public class SupportChatMemoryAndJobsTests : IDisposable
         var jobs = new FakeJobListingProvider();
         var service = BuildService(db, provider, jobListingProvider: jobs);
 
-        var session = await service.CreateSessionAsync(studentId: 42, visitorId: null, CancellationToken.None);
-        await service.SendMessageAsync(session.PublicId, "Any jobs for me?", CancellationToken.None);
+        var session = (await service.CreateSessionAsync(studentId: 42, visitorId: null, CancellationToken.None))!;
+        await service.SendMessageAsync(session.PublicId, CallerFor(session), "Any jobs for me?", CancellationToken.None);
 
         Assert.Equal(42, jobs.LastStudentId);
     }
@@ -196,8 +199,8 @@ public class SupportChatMemoryAndJobsTests : IDisposable
         var jobs = new FakeJobListingProvider();
         var service = BuildService(db, provider, jobListingProvider: jobs);
 
-        var session = await service.CreateSessionAsync(studentId: null, visitorId: "anon-1", CancellationToken.None);
-        await service.SendMessageAsync(session.PublicId, "Any jobs?", CancellationToken.None);
+        var session = (await service.CreateSessionAsync(studentId: null, visitorId: "anon-1", CancellationToken.None))!;
+        await service.SendMessageAsync(session.PublicId, CallerFor(session), "Any jobs?", CancellationToken.None);
 
         Assert.Null(jobs.LastStudentId);
     }

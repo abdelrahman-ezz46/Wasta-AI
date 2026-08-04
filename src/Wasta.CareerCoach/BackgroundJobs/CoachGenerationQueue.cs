@@ -13,11 +13,16 @@ public class CoachGenerationQueue
 {
     private const int Capacity = 500;
 
+    // FullMode.Wait, not DropWrite: TryWrite never blocks under either mode,
+    // but DropWrite returns true while silently discarding the item, so a
+    // full queue would look like a successful enqueue. Wait makes TryWrite
+    // return false when full, which is what lets the caller (and the
+    // sweeper) know the job still needs picking up.
     private readonly Channel<int> _channel = Channel.CreateBounded<int>(new BoundedChannelOptions(Capacity)
     {
         SingleReader = true,
         SingleWriter = false,
-        FullMode = BoundedChannelFullMode.DropWrite,
+        FullMode = BoundedChannelFullMode.Wait,
     });
 
     public bool TryEnqueue(int attemptId) => _channel.Writer.TryWrite(attemptId);

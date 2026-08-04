@@ -11,6 +11,9 @@ namespace Wasta.SupportChat.Tests;
 
 public class SupportChatServiceTests : IDisposable
 {
+
+    private static ChatCaller CallerFor(ChatSession s) => new(s.StudentId, s.VisitorId);
+    private static readonly ChatCaller AnyCaller = new(null, "any-visitor");
     private readonly string _promptPath;
     private readonly string _knowledgePath;
 
@@ -67,8 +70,8 @@ public class SupportChatServiceTests : IDisposable
         var provider = new FakeAiProvider("groq").EnqueueResponse("The Wasta Score is deterministic.");
         var service = BuildService(db, [provider]);
 
-        var session = await service.CreateSessionAsync(studentId: null, visitorId: "visitor-1", CancellationToken.None);
-        var result = await service.SendMessageAsync(session.PublicId, "How is my score calculated?", CancellationToken.None);
+        var session = (await service.CreateSessionAsync(studentId: null, visitorId: "visitor-1", CancellationToken.None))!;
+        var result = await service.SendMessageAsync(session.PublicId, CallerFor(session), "How is my score calculated?", CancellationToken.None);
 
         Assert.Equal(ChatSendOutcome.Answered, result.Outcome);
         Assert.Equal("The Wasta Score is deterministic.", result.Reply);
@@ -88,11 +91,11 @@ public class SupportChatServiceTests : IDisposable
             .EnqueueResponse("Second answer.");
         var service = BuildService(db, [provider]);
 
-        var session = await service.CreateSessionAsync(null, "visitor-2", CancellationToken.None);
-        await service.SendMessageAsync(session.PublicId, "First question", CancellationToken.None);
-        await service.SendMessageAsync(session.PublicId, "Second question", CancellationToken.None);
+        var session = (await service.CreateSessionAsync(null, "visitor-2", CancellationToken.None))!;
+        await service.SendMessageAsync(session.PublicId, CallerFor(session), "First question", CancellationToken.None);
+        await service.SendMessageAsync(session.PublicId, CallerFor(session), "Second question", CancellationToken.None);
 
-        var history = await service.GetHistoryAsync(session.PublicId, CancellationToken.None);
+        var history = await service.GetHistoryAsync(session.PublicId, CallerFor(session), CancellationToken.None);
 
         Assert.Equal(4, history.Count);
         Assert.Equal("First question", history[0].Content);
@@ -108,7 +111,7 @@ public class SupportChatServiceTests : IDisposable
         var provider = new FakeAiProvider("groq");
         var service = BuildService(db, [provider]);
 
-        var result = await service.SendMessageAsync(Guid.NewGuid(), "hello", CancellationToken.None);
+        var result = await service.SendMessageAsync(Guid.NewGuid(), AnyCaller, "hello", CancellationToken.None);
 
         Assert.Equal(ChatSendOutcome.SessionNotFound, result.Outcome);
         Assert.Equal(0, provider.CallCount);
@@ -121,8 +124,8 @@ public class SupportChatServiceTests : IDisposable
         var provider = new FakeAiProvider("groq");
         var service = BuildService(db, [provider], o => o.MaxMessageLength = 10);
 
-        var session = await service.CreateSessionAsync(null, "visitor-3", CancellationToken.None);
-        var result = await service.SendMessageAsync(session.PublicId, "this message is definitely too long", CancellationToken.None);
+        var session = (await service.CreateSessionAsync(null, "visitor-3", CancellationToken.None))!;
+        var result = await service.SendMessageAsync(session.PublicId, CallerFor(session), "this message is definitely too long", CancellationToken.None);
 
         Assert.Equal(ChatSendOutcome.InvalidMessage, result.Outcome);
         Assert.Equal(0, provider.CallCount);
@@ -136,8 +139,8 @@ public class SupportChatServiceTests : IDisposable
         var provider = new FakeAiProvider("groq");
         var service = BuildService(db, [provider], o => o.MaxMessagesPerSession = 0);
 
-        var session = await service.CreateSessionAsync(null, "visitor-4", CancellationToken.None);
-        var result = await service.SendMessageAsync(session.PublicId, "hello", CancellationToken.None);
+        var session = (await service.CreateSessionAsync(null, "visitor-4", CancellationToken.None))!;
+        var result = await service.SendMessageAsync(session.PublicId, CallerFor(session), "hello", CancellationToken.None);
 
         Assert.Equal(ChatSendOutcome.SessionLimitReached, result.Outcome);
         Assert.Equal(0, provider.CallCount);
@@ -150,9 +153,9 @@ public class SupportChatServiceTests : IDisposable
         var provider = new FakeAiProvider("groq").EnqueueResponse("First answer.");
         var service = BuildService(db, [provider], o => o.MinSecondsBetweenMessages = 1000);
 
-        var session = await service.CreateSessionAsync(null, "visitor-5", CancellationToken.None);
-        await service.SendMessageAsync(session.PublicId, "First question", CancellationToken.None);
-        var second = await service.SendMessageAsync(session.PublicId, "Second question", CancellationToken.None);
+        var session = (await service.CreateSessionAsync(null, "visitor-5", CancellationToken.None))!;
+        await service.SendMessageAsync(session.PublicId, CallerFor(session), "First question", CancellationToken.None);
+        var second = await service.SendMessageAsync(session.PublicId, CallerFor(session), "Second question", CancellationToken.None);
 
         Assert.Equal(ChatSendOutcome.RateLimited, second.Outcome);
         Assert.Equal(1, provider.CallCount);
@@ -165,8 +168,8 @@ public class SupportChatServiceTests : IDisposable
         var provider = new FakeAiProvider("groq").EnqueueThrow(new AiTransientFailureException("500"));
         var service = BuildService(db, [provider]);
 
-        var session = await service.CreateSessionAsync(null, "visitor-6", CancellationToken.None);
-        var result = await service.SendMessageAsync(session.PublicId, "How does the coach work?", CancellationToken.None);
+        var session = (await service.CreateSessionAsync(null, "visitor-6", CancellationToken.None))!;
+        var result = await service.SendMessageAsync(session.PublicId, CallerFor(session), "How does the coach work?", CancellationToken.None);
 
         Assert.Equal(ChatSendOutcome.ProviderUnavailable, result.Outcome);
         Assert.False(string.IsNullOrWhiteSpace(result.Reply));
@@ -185,8 +188,8 @@ public class SupportChatServiceTests : IDisposable
         var provider = new FakeAiProvider("groq").EnqueueResponse("I can't help with that, but I can answer Wasta questions.");
         var service = BuildService(db, [provider]);
 
-        var session = await service.CreateSessionAsync(null, "visitor-7", CancellationToken.None);
-        await service.SendMessageAsync(session.PublicId, injection, CancellationToken.None);
+        var session = (await service.CreateSessionAsync(null, "visitor-7", CancellationToken.None))!;
+        await service.SendMessageAsync(session.PublicId, CallerFor(session), injection, CancellationToken.None);
 
         Assert.DoesNotContain(injection, provider.LastSystemPrompt);
         Assert.Contains(provider.LastTurns!, t => t.Role == "user" && t.Content == injection);
@@ -201,9 +204,9 @@ public class SupportChatServiceTests : IDisposable
             .EnqueueResponse("Answer two.");
         var service = BuildService(db, [provider]);
 
-        var session = await service.CreateSessionAsync(null, "visitor-8", CancellationToken.None);
-        await service.SendMessageAsync(session.PublicId, "Question one", CancellationToken.None);
-        await service.SendMessageAsync(session.PublicId, "Question two", CancellationToken.None);
+        var session = (await service.CreateSessionAsync(null, "visitor-8", CancellationToken.None))!;
+        await service.SendMessageAsync(session.PublicId, CallerFor(session), "Question one", CancellationToken.None);
+        await service.SendMessageAsync(session.PublicId, CallerFor(session), "Question two", CancellationToken.None);
 
         var turns = provider.LastTurns!;
         Assert.Contains(turns, t => t.Role == "user" && t.Content == "Question one");

@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Wasta.Ai;
+using Wasta.SupportChat.Api;
 using Wasta.SupportChat.Data;
 using Wasta.SupportChat.Domain;
 using Wasta.SupportChat.Services;
@@ -29,6 +30,8 @@ public static class SupportChatServiceCollectionExtensions
         services.Configure<SupportChatOptions>(configuration.GetSection(SupportChatOptions.SectionName));
 
         services.AddDbContext<SupportChatDbContext>(options => options.UseNpgsql(chatConnectionString));
+
+        services.AddSupportChatRateLimiting();
 
         services.TryAddSingleton<IJobListingProvider, NullJobListingProvider>();
         services.AddScoped<SupportChatService>();
