@@ -112,14 +112,35 @@ Status keys used below:
 
 ## How to run the blocked rows
 
+Every row above marked *needs a real key* is automated in `scripts/verify-guardrails.sh`:
+
 ```bash
+# 1. Set a key. Never paste one into chat, a commit, or a config file.
 dotnet user-secrets --project src/Wasta.DevHost set "Ai:Providers:groq:ApiKey" "<key>"
 dotnet user-secrets --project src/Wasta.DevHost set "Ai:Providers:groq:Model" "<model-id>"
+
+# 2. Run the host (leave it running)
 dotnet run --project src/Wasta.DevHost
+
+# 3. In another terminal
+./scripts/verify-guardrails.sh
 ```
 
 The provider chain is `[groq, gemini, dev]` and skips unconfigured providers, so a real key takes
-over automatically and the fixture provider is never reached.
+over automatically. **The script exits with code 3 if the `dev` fixture served the request** — it
+refuses to report a pass on anything but a real model, because a green run against a stub is worse
+than no run at all.
+
+What it checks: the plan survives validation; no percentage, percentile, `N out of M`, or
+employment-prospect language reaches the stored plan; a prompt injection planted in the student's
+skills is neither obeyed nor echoed; the chatbot declines account questions without inventing a
+score, refuses to reveal its system prompt, mentions only the job listings actually supplied and
+invents no URLs, and redirects off-topic requests.
+
+Re-run it after any prompt change, and periodically regardless — providers update models without
+notice, and these are properties of the model, not of our code.
+
+**Last real-provider run:** _never_ — record the date and provider here when you run it.
 
 ## Database schema
 

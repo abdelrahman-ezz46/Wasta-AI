@@ -33,6 +33,11 @@ public class DemoAssessmentStore : IAssessmentDataProvider
             GraduationYear: 2027);
     }
 
+    /// <summary>Overrides a student's profile context. Exists so the guardrail
+    /// script can plant a prompt-injection string in the skills list and see
+    /// what a real model does with it.</summary>
+    public void SetStudentContext(int studentId, StudentContextData context) => _contexts[studentId] = context;
+
     /// <summary>Simulates the host app's submit flow producing a fresh scored
     /// attempt. Returns the ids the Career Coach needs to generate against.</summary>
     public AttemptScoreData RecordAttempt(int studentId, IReadOnlyList<SectionScoreData> sections)

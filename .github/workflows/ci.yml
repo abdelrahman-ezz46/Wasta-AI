@@ -55,8 +55,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # A credential was pasted into a chat during development once already.
-      # This is a cheap backstop against one reaching the repository.
+      # Credentials have been pasted into chat during development more than
+      # once, so treat a key reaching this repo as a live risk rather than a
+      # theoretical one. The Google "AQ."/"ya29." forms are here because an
+      # earlier version of this pattern only matched "AIza" and would have
+      # missed a real token.
       - name: Check for committed credentials
         run: |
           set -e
@@ -64,8 +67,8 @@ jobs:
             echo "::error::A file that should hold secrets is tracked in git."
             exit 1
           fi
-          if git grep -nIE '(github_pat_[A-Za-z0-9_]{20,}|gsk_[A-Za-z0-9]{20,}|AIza[A-Za-z0-9_-]{20,}|sk-[A-Za-z0-9]{20,})' -- . ; then
-            echo "::error::A value matching an API key or token pattern is committed."
+          if git grep -nIE '(github_pat_[A-Za-z0-9_]{20,}|ghp_[A-Za-z0-9]{30,}|gsk_[A-Za-z0-9]{20,}|AIza[A-Za-z0-9_-]{20,}|(AQ|ya29)\.[A-Za-z0-9_-]{20,}|sk-(proj-)?[A-Za-z0-9_-]{20,}|xox[baprs]-[A-Za-z0-9-]{10,})' -- . ; then
+            echo "::error::A value matching an API key or token pattern is committed. Revoke it, then remove it from history."
             exit 1
           fi
           echo "No committed credentials found."

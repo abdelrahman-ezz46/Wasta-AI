@@ -92,6 +92,16 @@ app.MapPost("/api/dev/assessments/submit", async (
         .Select(s => new SectionScoreData(s.Name, s.Percent))
         .ToList();
 
+    // Optional: lets the guardrail script plant untrusted text (e.g. a
+    // prompt-injection attempt) in the student's profile before generating.
+    if (request.Skills is not null || request.ProjectTitles is not null)
+    {
+        store.SetStudentContext(request.StudentId, new StudentContextData(
+            Skills: request.Skills ?? [],
+            ProjectTitles: request.ProjectTitles ?? [],
+            GraduationYear: request.GraduationYear));
+    }
+
     var attempt = store.RecordAttempt(request.StudentId, sections);
 
     await trigger.EnqueueGenerationAsync(attempt.StudentId, attempt.AttemptId, attempt.ScoreId, ct);
@@ -110,5 +120,11 @@ app.MapGet("/api/dev/health", () => Results.Ok(new { status = "ok" }));
 
 app.Run();
 
-internal sealed record SubmitAssessmentRequest(int StudentId, List<SubmitSection> Sections);
+internal sealed record SubmitAssessmentRequest(
+    int StudentId,
+    List<SubmitSection> Sections,
+    List<string>? Skills = null,
+    List<string>? ProjectTitles = null,
+    int? GraduationYear = null);
+
 internal sealed record SubmitSection(string Name, int Percent);
