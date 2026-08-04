@@ -1,0 +1,33 @@
+# Local Postgres for running the dev host against a real database.
+#
+#   docker compose up -d
+#   ./scripts/apply-migrations.sh
+#   ConnectionStrings__Wasta="Host=localhost;Port=55432;Database=wasta;Username=postgres;Password=wasta_local_dev" \
+#     dotnet run --project src/Wasta.DevHost
+#
+# Worth doing before trusting a change: the in-memory provider the dev host
+# defaults to ignores column types entirely, so jsonb columns and unique
+# indexes are never exercised by it.
+#
+# Port 55432 avoids clashing with a Postgres you may already run on 5432.
+# The password here is a throwaway for local development only.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: wasta-postgres
+    environment:
+      POSTGRES_PASSWORD: wasta_local_dev
+      POSTGRES_DB: wasta
+    ports:
+      - "55432:5432"
+    volumes:
+      - wasta-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  wasta-pgdata:

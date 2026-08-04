@@ -31,10 +31,28 @@ builder.Services.AddAuthorizationBuilder()
     .AddPolicy("StudentOnly", policy => policy.RequireRole("Student"))
     .AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
 
-// In-memory EF so `dotnet run` needs no database. Swap these for
-// UseNpgsql(connectionString) and run the migrations for the real thing.
-builder.Services.AddCareerCoach(builder.Configuration, db => db.UseInMemoryDatabase("wasta-coach-dev"));
-builder.Services.AddSupportChat(builder.Configuration, db => db.UseInMemoryDatabase("wasta-chat-dev"));
+// Defaults to in-memory EF so `dotnet run` needs no database at all. Set a
+// ConnectionStrings:Wasta value to run against real Postgres instead -
+// worth doing before trusting anything, because the in-memory provider
+// ignores column types entirely, so jsonb columns and unique indexes are
+// never actually exercised by it.
+var connectionString = builder.Configuration.GetConnectionString("Wasta");
+var usePostgres = !string.IsNullOrWhiteSpace(connectionString);
+
+void ConfigureDb(DbContextOptionsBuilder db, string inMemoryName)
+{
+    if (usePostgres)
+    {
+        db.UseNpgsql(connectionString);
+    }
+    else
+    {
+        db.UseInMemoryDatabase(inMemoryName);
+    }
+}
+
+builder.Services.AddCareerCoach(builder.Configuration, db => ConfigureDb(db, "wasta-coach-dev"));
+builder.Services.AddSupportChat(builder.Configuration, db => ConfigureDb(db, "wasta-chat-dev"));
 
 // The five ports the modules leave for the host to implement.
 builder.Services.AddSingleton<DemoAssessmentStore>();
@@ -48,6 +66,8 @@ builder.Services.AddSingleton<IJobListingProvider, DemoJobListingProvider>();
 builder.Services.AddSingleton<IAiProvider, DevEchoProvider>();
 
 var app = builder.Build();
+
+app.Logger.LogInformation("Storage: {Storage}", usePostgres ? "PostgreSQL" : "in-memory (no column types enforced)");
 
 app.UseDefaultFiles();
 app.UseStaticFiles();

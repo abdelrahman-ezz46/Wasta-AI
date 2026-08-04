@@ -18,6 +18,20 @@ dotnet run --project src/Wasta.DevHost
 No database and no API keys required — EF runs in memory and a fixture provider stands in for the
 model. See [src/Wasta.DevHost/README.md](src/Wasta.DevHost/README.md).
 
+### Against real Postgres
+
+The in-memory provider ignores column types, so `jsonb` columns and unique indexes are never
+exercised by it. Before trusting a schema change, run against the real thing:
+
+```bash
+docker compose up -d
+./scripts/apply-migrations.sh
+ConnectionStrings__Wasta="Host=localhost;Port=55432;Database=wasta;Username=postgres;Password=wasta_local_dev" \
+  dotnet run --project src/Wasta.DevHost
+```
+
+The migration script is idempotent — the same command works on a fresh or existing database.
+
 ## Layout
 
 | Path | What it is |
@@ -29,6 +43,7 @@ model. See [src/Wasta.DevHost/README.md](src/Wasta.DevHost/README.md).
 | `src/frontend/coach-card` | React results-page card |
 | `src/frontend/chat-widget` | React floating chat widget |
 | `docs/TESTING.md` | Acceptance checklist with current verified/blocked status |
+| `docs/KNOWLEDGE-BASE-QUESTIONNAIRE.md` | The questions a product owner must answer to unblock the chatbot |
 
 ## Integrating into the real app
 

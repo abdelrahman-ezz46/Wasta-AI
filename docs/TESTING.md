@@ -121,12 +121,31 @@ dotnet run --project src/Wasta.DevHost
 The provider chain is `[groq, gemini, dev]` and skips unconfigured providers, so a real key takes
 over automatically and the fixture provider is never reached.
 
+## Database schema
+
+- [verified] Both modules' migrations apply cleanly to **PostgreSQL 16**
+- [verified] `WeeklyPlan` and `ProjectSkills` are genuine `jsonb` — queryable with `->` and
+  `jsonb_array_length`, not text blobs
+- [verified] `UNIQUE(AttemptId)` is enforced by the database: a duplicate insert is rejected
+- [verified] All indexes from the spec exist, with the right uniqueness flags
+- [verified] The app round-trips real data through Postgres — coach plan written and read back,
+  chat sessions and messages persisted
+- [verified] `scripts/apply-migrations.sh` is idempotent — a second run is a clean no-op
+
+> Worth repeating for anyone changing the schema: the in-memory EF provider **ignores column types
+> entirely**. A `jsonb` column and a `text` column look identical to it, and unique indexes are not
+> enforced. Run `docker compose up -d && ./scripts/apply-migrations.sh` before trusting a change.
+
+---
+
 ## Known gaps before launch
 
 1. **The knowledge base has 9 unresolved TODOs.** The chatbot cannot answer account, retake,
    unlock, or privacy-policy questions until a product owner fills them in. The app warns about
-   this on every boot.
+   this on every boot, and
+   [docs/KNOWLEDGE-BASE-QUESTIONNAIRE.md](KNOWLEDGE-BASE-QUESTIONNAIRE.md) turns each gap into a
+   specific question.
 2. **No production host.** `Wasta.DevHost` is a harness and refuses to start outside Development.
-   A real host needs Postgres, both migrations, real authentication, and real implementations of
-   the five ports.
+   A real host needs real authentication and real implementations of the five ports. The database
+   half is now proven.
 3. **No real-provider run yet.** Every row above marked *needs a real key* is genuinely unverified.
