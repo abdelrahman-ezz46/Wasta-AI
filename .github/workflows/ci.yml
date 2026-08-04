@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    name: Build and test (.NET)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore WastaCareerCoach.slnx
+
+      # Warnings have been driven to zero, so keep them there rather than
+      # letting them creep back one PR at a time.
+      - name: Build
+        run: dotnet build WastaCareerCoach.slnx --no-restore --warnaserror
+
+      - name: Test
+        run: dotnet test WastaCareerCoach.slnx --no-build --verbosity normal
+
+  frontend:
+    name: Typecheck (TypeScript)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [coach-card, chat-widget]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install
+        working-directory: src/frontend/${{ matrix.package }}
+        run: npm ci || npm install
+
+      - name: Typecheck
+        working-directory: src/frontend/${{ matrix.package }}
+        run: npx tsc --noEmit
+
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # A credential was pasted into a chat during development once already.
+      # This is a cheap backstop against one reaching the repository.
+      - name: Check for committed credentials
+        run: |
+          set -e
+          if git ls-files | grep -E '(^|/)\.env$|appsettings\.(Development|Local|Production)\.json$'; then
+            echo "::error::A file that should hold secrets is tracked in git."
+            exit 1
+          fi
+          if git grep -nIE '(github_pat_[A-Za-z0-9_]{20,}|gsk_[A-Za-z0-9]{20,}|AIza[A-Za-z0-9_-]{20,}|sk-[A-Za-z0-9]{20,})' -- . ; then
+            echo "::error::A value matching an API key or token pattern is committed."
+            exit 1
+          fi
+          echo "No committed credentials found."

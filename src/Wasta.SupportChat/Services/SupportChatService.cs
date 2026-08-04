@@ -186,9 +186,13 @@ public class SupportChatService
     private async Task<string> BuildSystemPromptAsync(int? studentId, CancellationToken ct)
     {
         var promptText = await PromptFile.ReadAllTextAsync(_options.PromptPath, ct);
-        var knowledgeText = await PromptFile.ReadAllTextAsync(_options.KnowledgePath, ct);
 
-        var prompt = new StringBuilder(promptText).Append('\n').Append(knowledgeText);
+        // Unresolved TODO drafts are stripped here - see KnowledgeBaseLoader.
+        // They must never reach the model, which would happily quote them
+        // back to a student as though they were answers.
+        var knowledge = await KnowledgeBaseLoader.LoadAsync(_options.KnowledgePath, ct);
+
+        var prompt = new StringBuilder(promptText).Append('\n').Append(knowledge.Text);
 
         var listings = await _jobListingProvider.GetOpenListingsAsync(studentId, _options.MaxJobListings, ct);
         if (listings.Count > 0)

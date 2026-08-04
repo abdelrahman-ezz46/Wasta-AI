@@ -41,6 +41,7 @@ public static class SupportChatServiceCollectionExtensions
 
         services.TryAddSingleton<IJobListingProvider, NullJobListingProvider>();
         services.AddScoped<SupportChatService>();
+        services.AddHostedService<KnowledgeBaseStartupCheck>();
 
         return services;
     }

@@ -1,15 +1,25 @@
-# Wasta platform knowledge base (draft v1)
+<!--
+EDITOR NOTES - stripped before this file reaches the model, so write freely here.
 
 This file is the chatbot's entire source of truth about how the platform
-works. It gets injected into the system prompt in full - there is no search
-or retrieval step. Keep it accurate, keep it current, and keep entries
-short: everything here counts against the model's context on every message.
+works. It is injected into the system prompt in full - there is no search or
+retrieval step. Keep it accurate, keep it current, and keep entries short:
+everything here counts against the model's context on every message.
+
+Two conventions:
+  * Anything inside an HTML comment (like this block) is for whoever edits
+    the document and never reaches the model.
+  * "[TODO: ...]" marks a known gap. These are also stripped, so the chatbot
+    simply won't answer that topic and will point the user to support. That
+    is deliberate - a stripped gap is safe, a guess is not. The app logs a
+    warning at startup counting how many remain.
 
 This draft only contains what was established while building the AI Career
-Coach feature. A real product/support owner should review and expand it -
-especially the TODO markers - before this goes live. Do not let the model
-guess past what's written here; that's what the system prompt's "don't
-know" rule is for.
+Coach feature. A product or support owner should review and expand it -
+especially the TODO markers - before launch.
+-->
+
+# Wasta platform knowledge base (draft v1)
 
 ## What Wasta is
 

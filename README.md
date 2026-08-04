@@ -1,0 +1,73 @@
+# Wasta AI features
+
+Two AI features for the Wasta talent platform, built as drop-in modules rather than a standalone
+application:
+
+- **AI Career Coach** — turns a student's assessment section scores into a personalized 4-week study
+  plan, generated once in a background job and stored. Never blocks the results page, never touches
+  the Wasta Score.
+- **Support Chatbot** — answers "how does this work" questions from a curated knowledge base, with
+  cross-visit memory for logged-in students and job recommendations sourced from the host app.
+
+## Try it now
+
+```bash
+dotnet run --project src/Wasta.DevHost
+```
+
+No database and no API keys required — EF runs in memory and a fixture provider stands in for the
+model. See [src/Wasta.DevHost/README.md](src/Wasta.DevHost/README.md).
+
+## Layout
+
+| Path | What it is |
+|---|---|
+| `src/Wasta.Ai` | Shared provider chain (Groq → Gemini) with fallthrough on 429/5xx/timeout |
+| `src/Wasta.CareerCoach` | Career Coach: entity, generation service, validator, background jobs, endpoints |
+| `src/Wasta.SupportChat` | Chatbot: sessions, memory, knowledge base, rate limiting, endpoints |
+| `src/Wasta.DevHost` | Runnable harness. Development only — refuses to start elsewhere |
+| `src/frontend/coach-card` | React results-page card |
+| `src/frontend/chat-widget` | React floating chat widget |
+| `docs/TESTING.md` | Acceptance checklist with current verified/blocked status |
+
+## Integrating into the real app
+
+Both modules are self-contained and depend on the host only through small port interfaces. Register
+your implementations **before** calling the `Add*` extensions:
+
+| Interface | Purpose |
+|---|---|
+| `IAssessmentDataProvider` | Reads attempt scores and student context from your scoring tables |
+| `ICurrentStudentAccessor` | Resolves the caller's student id (each module declares its own) |
+| `IAuditLogWriter` | Writes the regenerate audit entry |
+| `IJobListingProvider` | Supplies job listings; optional, defaults to a no-op |
+
+```csharp
+builder.Services.AddCareerCoach(builder.Configuration, connectionString);
+builder.Services.AddSupportChat(builder.Configuration, connectionString);
+
+app.MapCareerCoachEndpoints();
+app.MapSupportChatEndpoints();
+```
+
+Then call `CoachPlanTrigger.EnqueueGenerationAsync(...)` from your submit flow, after scoring —
+without awaiting generation.
+
+## Configuration
+
+Merge the `Ai`, `CareerCoach`, and `SupportChat` sections from
+[src/Wasta.DevHost/appsettings.json](src/Wasta.DevHost/appsettings.json). The `Ai` section is shared
+by both modules — merge it once.
+
+**Never commit API keys.** Use environment variables or `dotnet user-secrets`; `.env` and
+`appsettings.Development|Local|Production.json` are gitignored, and CI fails the build if a
+credential pattern is committed.
+
+`Ai:Enabled = false` disables both features cleanly from a single flag: plans go to `Skipped`,
+endpoints report `unavailable`, and the UI renders nothing. That is the launch-day escape hatch.
+
+## Status
+
+84 tests passing, 0 warnings. **Not yet production-ready** — there is no production host, the
+knowledge base has unresolved TODOs, and the guardrail rows have not been run against a real model.
+[docs/TESTING.md](docs/TESTING.md) tracks exactly what is verified and what is not.
