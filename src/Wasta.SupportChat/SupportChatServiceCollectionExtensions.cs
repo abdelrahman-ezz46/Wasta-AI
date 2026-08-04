@@ -25,11 +25,17 @@ public static class SupportChatServiceCollectionExtensions
     /// works, it just never has listings to offer.
     /// </summary>
     public static IServiceCollection AddSupportChat(this IServiceCollection services, IConfiguration configuration, string chatConnectionString)
+        => services.AddSupportChat(configuration, options => options.UseNpgsql(chatConnectionString));
+
+    /// <summary>Overload letting the host pick its own EF provider - Npgsql in
+    /// production, in-memory for a dev host or tests.</summary>
+    public static IServiceCollection AddSupportChat(
+        this IServiceCollection services, IConfiguration configuration, Action<DbContextOptionsBuilder> configureDb)
     {
         services.AddWastaAi(configuration);
         services.Configure<SupportChatOptions>(configuration.GetSection(SupportChatOptions.SectionName));
 
-        services.AddDbContext<SupportChatDbContext>(options => options.UseNpgsql(chatConnectionString));
+        services.AddDbContext<SupportChatDbContext>(configureDb);
 
         services.AddSupportChatRateLimiting();
 

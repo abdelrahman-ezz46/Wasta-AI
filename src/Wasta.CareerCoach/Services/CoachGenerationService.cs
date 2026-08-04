@@ -85,10 +85,14 @@ public class CoachGenerationService
         string systemPrompt;
         try
         {
-            systemPrompt = await File.ReadAllTextAsync(_coachOptions.PromptPath, ct);
+            systemPrompt = await PromptFile.ReadAllTextAsync(_coachOptions.PromptPath, ct);
         }
         catch (IOException ex)
         {
+            // Logged loudly: a misconfigured prompt path fails every single
+            // generation, and without a log line it looks identical to the
+            // provider being down.
+            _logger.LogError(ex, "Coach prompt file could not be read from configured path {PromptPath}", _coachOptions.PromptPath);
             var plan = await MarkFailedAsync(attemptId, existing, attemptData.StudentId, attemptData.ScoreId, $"Prompt file unreadable: {ex.Message}", ct);
             return new CoachResult(false, plan, ex.Message);
         }

@@ -185,8 +185,8 @@ public class SupportChatService
 
     private async Task<string> BuildSystemPromptAsync(int? studentId, CancellationToken ct)
     {
-        var promptText = await File.ReadAllTextAsync(_options.PromptPath, ct);
-        var knowledgeText = await File.ReadAllTextAsync(_options.KnowledgePath, ct);
+        var promptText = await PromptFile.ReadAllTextAsync(_options.PromptPath, ct);
+        var knowledgeText = await PromptFile.ReadAllTextAsync(_options.KnowledgePath, ct);
 
         var prompt = new StringBuilder(promptText).Append('\n').Append(knowledgeText);
 

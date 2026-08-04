@@ -20,11 +20,17 @@ public static class CareerCoachServiceCollectionExtensions
     /// resolve at runtime.
     /// </summary>
     public static IServiceCollection AddCareerCoach(this IServiceCollection services, IConfiguration configuration, string coachConnectionString)
+        => services.AddCareerCoach(configuration, options => options.UseNpgsql(coachConnectionString));
+
+    /// <summary>Overload letting the host pick its own EF provider - Npgsql in
+    /// production, in-memory for a dev host or tests.</summary>
+    public static IServiceCollection AddCareerCoach(
+        this IServiceCollection services, IConfiguration configuration, Action<DbContextOptionsBuilder> configureDb)
     {
         services.AddWastaAi(configuration);
         services.Configure<CoachOptions>(configuration.GetSection(CoachOptions.SectionName));
 
-        services.AddDbContext<CoachDbContext>(options => options.UseNpgsql(coachConnectionString));
+        services.AddDbContext<CoachDbContext>(configureDb);
 
         services.AddScoped<CoachGenerationService>();
         services.AddScoped<CoachPlanTrigger>();

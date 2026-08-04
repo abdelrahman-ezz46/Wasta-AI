@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wasta dev harness</title>
+<style>
+  :root { --bg:#fafafa; --card:#fff; --border:#e4e4e7; --fg:#18181b; --muted:#71717a; --accent:#4338ca; --ok:#166534; --okbg:#f0fdf4; --warn:#a32d2d; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#09090b; --card:#18181b; --border:#3f3f46; --fg:#f4f4f5; --muted:#a1a1aa; --accent:#a5b4fc; --ok:#bbf7d0; --okbg:#052e16; --warn:#f09595; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:1rem; background:var(--bg); color:var(--fg); font:15px/1.6 system-ui,-apple-system,sans-serif; }
+  .wrap { max-width:860px; margin:0 auto; }
+  h1 { font-size:1.25rem; margin:0 0 .25rem; }
+  h2 { font-size:1rem; margin:0 0 .75rem; }
+  .sub { color:var(--muted); font-size:.8125rem; margin:0 0 1.25rem; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:1rem; margin-bottom:1rem; }
+  label { display:block; font-size:.75rem; color:var(--muted); margin-bottom:.25rem; }
+  input,select,textarea { width:100%; padding:.5rem .625rem; border:1px solid var(--border); border-radius:8px; background:var(--card); color:var(--fg); font:inherit; font-size:.875rem; }
+  button { padding:.5rem 1rem; border:none; border-radius:8px; background:var(--accent); color:#fff; font:inherit; font-size:.875rem; font-weight:600; cursor:pointer; }
+  @media (prefers-color-scheme: dark) { button { color:#18181b; } }
+  button:disabled { opacity:.5; cursor:default; }
+  button.ghost { background:transparent; color:var(--accent); border:1px solid var(--border); }
+  .row { display:flex; gap:.5rem; flex-wrap:wrap; align-items:end; }
+  .row > * { flex:1 1 140px; }
+  .row > button { flex:0 0 auto; }
+  pre { background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:.75rem; overflow-x:auto; font-size:.75rem; margin:.5rem 0 0; white-space:pre-wrap; }
+  .status { font-size:.75rem; color:var(--muted); margin-top:.5rem; }
+  .plan { border:1px solid var(--border); border-radius:8px; padding:.875rem; margin-top:.75rem; }
+  .plan h3 { margin:0 0 .5rem; font-size:.9375rem; }
+  .week { border-left:3px solid var(--accent); padding-left:.75rem; margin:.625rem 0; }
+  .week b { font-size:.8125rem; }
+  .week ul { margin:.25rem 0; padding-left:1.125rem; font-size:.8125rem; }
+  .chk { font-size:.75rem; color:var(--muted); font-style:italic; }
+  .proj { background:var(--okbg); border:1px solid var(--border); border-radius:8px; padding:.75rem; margin-top:.625rem; }
+  .quote { border-left:3px solid var(--accent); padding:.5rem .75rem; font-style:italic; margin-top:.625rem; font-size:.875rem; }
+  .msgs { max-height:280px; overflow-y:auto; display:flex; flex-direction:column; gap:.5rem; margin-bottom:.625rem; }
+  .b { max-width:82%; padding:.5rem .75rem; border-radius:12px; font-size:.8125rem; white-space:pre-wrap; }
+  .b.u { align-self:flex-end; background:var(--accent); color:#fff; }
+  @media (prefers-color-scheme: dark) { .b.u { color:#18181b; } }
+  .b.a { align-self:flex-start; background:var(--bg); border:1px solid var(--border); }
+  .note { font-size:.75rem; color:var(--muted); }
+  .warn { color:var(--warn); font-weight:600; }
+  .ok { color:var(--ok); font-weight:600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Wasta dev harness</h1>
+  <p class="sub">Drives the real endpoints from <code>Wasta.CareerCoach</code> and <code>Wasta.SupportChat</code>. This page is a test rig, not the production UI &mdash; the shipping components are the React ones under <code>src/frontend/</code>.</p>
+
+  <div class="card">
+    <h2>Who am I?</h2>
+    <div class="row">
+      <div>
+        <label>Identity (sent as dev auth headers)</label>
+        <select id="who">
+          <option value="1">Student 1 (Data &amp; AI)</option>
+          <option value="2">Student 2 (Software Engineering)</option>
+          <option value="">Anonymous visitor</option>
+        </select>
+      </div>
+      <div>
+        <label>Admin role</label>
+        <select id="admin"><option value="">No</option><option value="true">Yes</option></select>
+      </div>
+    </div>
+    <p class="note" style="margin-top:.5rem">Switching identity is how you check that one student never sees another's chat memory or coach plan.</p>
+  </div>
+
+  <div class="card">
+    <h2>1. Submit an assessment</h2>
+    <div class="row">
+      <div><label>Python &amp; data handling</label><input id="s1" type="number" value="78"></div>
+      <div><label>Statistics &amp; ML</label><input id="s2" type="number" value="41"></div>
+      <div><label>Applied modelling</label><input id="s3" type="number" value="55"></div>
+      <div><label>SQL &amp; pipelines</label><input id="s4" type="number" value="34"></div>
+    </div>
+    <p style="margin:.75rem 0 0"><button id="submitBtn">Submit</button></p>
+    <div class="status" id="submitStatus"></div>
+    <pre id="submitOut" hidden></pre>
+  </div>
+
+  <div class="card">
+    <h2>2. Coach plan</h2>
+    <p class="note">Polls <code>GET /api/students/me/coach-plan</code> every 2s, exactly like the real card. Watch it go pending &rarr; ready.</p>
+    <p style="margin:.5rem 0 0"><button id="pollBtn" class="ghost">Fetch now</button></p>
+    <div class="status" id="planStatus">Not fetched yet.</div>
+    <div id="planOut"></div>
+  </div>
+
+  <div class="card">
+    <h2>3. Support chat</h2>
+    <div class="msgs" id="msgs"></div>
+    <div class="row">
+      <input id="chatIn" placeholder="Try: what jobs are open?" style="flex:1 1 auto">
+      <button id="sendBtn">Send</button>
+      <button id="newBtn" class="ghost">New session</button>
+    </div>
+    <div class="status" id="chatStatus"></div>
+  </div>
+
+  <div class="card">
+    <h2>4. Authorization probe</h2>
+    <p class="note">Takes the session id from the chat above and replays it as a <em>different</em> identity &mdash; the stolen-session-id case. Expect empty history and 404, never someone else's conversation.</p>
+    <p style="margin:.5rem 0 0"><button id="probeBtn" class="ghost">Run probe</button></p>
+    <pre id="probeOut" hidden></pre>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const visitorId = localStorage.getItem('devVisitorId') || (() => { const v = crypto.randomUUID(); localStorage.setItem('devVisitorId', v); return v; })();
+let sessionId = null, pollTimer = null;
+
+function authHeaders(overrideStudent) {
+  const h = {};
+  const who = overrideStudent !== undefined ? overrideStudent : $('who').value;
+  if (who) h['X-Dev-Student-Id'] = who;
+  if ($('admin').value) h['X-Dev-Admin'] = 'true';
+  return h;
+}
+function chatHeaders(overrideStudent, overrideVisitor) {
+  return { ...authHeaders(overrideStudent), 'X-Wasta-Visitor-Id': overrideVisitor ?? visitorId };
+}
+
+$('submitBtn').onclick = async () => {
+  const who = $('who').value;
+  if (!who) { $('submitStatus').innerHTML = '<span class="warn">Pick a student — anonymous visitors have no assessment.</span>'; return; }
+  $('submitBtn').disabled = true;
+  const t0 = performance.now();
+  const res = await fetch('/api/dev/assessments/submit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ studentId: +who, sections: [
+      { name: 'Python & data handling', percent: +$('s1').value },
+      { name: 'Statistics & ML fundamentals', percent: +$('s2').value },
+      { name: 'Applied modelling', percent: +$('s3').value },
+      { name: 'SQL & data pipelines', percent: +$('s4').value },
+    ]}),
+  });
+  const ms = Math.round(performance.now() - t0);
+  const data = await res.json();
+  $('submitBtn').disabled = false;
+  $('submitOut').hidden = false;
+  $('submitOut').textContent = JSON.stringify(data, null, 2);
+  const fast = ms < 3000;
+  $('submitStatus').innerHTML = `Responded in <b>${ms}ms</b> ` +
+    (fast ? '<span class="ok">(under the 3s budget — generation did not block)</span>'
+          : '<span class="warn">(OVER the 3s budget)</span>');
+  startPolling();
+};
+
+function startPolling() {
+  clearInterval(pollTimer);
+  let n = 0;
+  const tick = async () => {
+    n++;
+    const done = await fetchPlan();
+    if (done || n > 30) clearInterval(pollTimer);
+  };
+  tick();
+  pollTimer = setInterval(tick, 2000);
+}
+
+$('pollBtn').onclick = () => fetchPlan();
+
+async function fetchPlan() {
+  const res = await fetch('/api/students/me/coach-plan', { headers: authHeaders() });
+  if (res.status === 401 || res.status === 403) {
+    $('planStatus').innerHTML = '<span class="warn">Not authorized — pick a student identity.</span>';
+    return true;
+  }
+  const p = await res.json();
+  if (p.status === 'pending') { $('planStatus').textContent = 'status: pending — generating in the background…'; $('planOut').innerHTML = ''; return false; }
+  if (p.status === 'unavailable') { $('planStatus').innerHTML = 'status: <b>unavailable</b> — the real card renders nothing here, by design.'; $('planOut').innerHTML = ''; return true; }
+  $('planStatus').innerHTML = 'status: <span class="ok">ready</span>';
+  $('planOut').innerHTML = `<div class="plan">
+      <h3>${esc(p.headline)}</h3>
+      <p style="font-size:.875rem">${esc(p.assessment)}</p>
+      ${p.weekly_plan.map(w => `<div class="week"><b>Week ${w.week} — ${esc(w.focus)}</b>
+        <ul>${w.actions.map(a => `<li>${esc(a)}</li>`).join('')}</ul>
+        <div class="chk">You'll know it's working when: ${esc(w.checkpoint)}</div></div>`).join('')}
+      <div class="proj"><b>${esc(p.project_suggestion.title)}</b>
+        <p style="margin:.375rem 0 0;font-size:.8125rem">${esc(p.project_suggestion.description)}</p></div>
+      <div class="quote">&ldquo;${esc(p.interview_line)}&rdquo;</div>
+    </div>`;
+  return true;
+}
+
+async function ensureSession() {
+  if (sessionId) return sessionId;
+  const res = await fetch('/api/chat/sessions', {
+    method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ visitorId }),
+  });
+  if (!res.ok) { $('chatStatus').innerHTML = `<span class="warn">Session creation failed (${res.status})</span>`; return null; }
+  sessionId = (await res.json()).sessionId;
+  $('chatStatus').textContent = 'session ' + sessionId;
+  return sessionId;
+}
+
+$('sendBtn').onclick = async () => {
+  const text = $('chatIn').value.trim();
+  if (!text) return;
+  const sid = await ensureSession();
+  if (!sid) return;
+  addMsg('u', text);
+  $('chatIn').value = '';
+  $('sendBtn').disabled = true;
+  const res = await fetch(`/api/chat/sessions/${sid}/messages`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', ...chatHeaders() },
+    body: JSON.stringify({ message: text }),
+  });
+  $('sendBtn').disabled = false;
+  if (res.status === 429) { $('chatStatus').innerHTML = '<span class="warn">429 — per-IP rate limit hit.</span>'; return; }
+  if (!res.ok) { $('chatStatus').innerHTML = `<span class="warn">${res.status}</span>`; return; }
+  const d = await res.json();
+  addMsg('a', d.reply);
+  $('chatStatus').textContent = 'outcome: ' + d.outcome + ' · session ' + sid;
+};
+
+$('newBtn').onclick = async () => {
+  sessionId = null; $('msgs').innerHTML = '';
+  await ensureSession();
+  const sid = sessionId;
+  if (!sid) return;
+  const res = await fetch(`/api/chat/sessions/${sid}/messages`, { headers: chatHeaders() });
+  const hist = await res.json();
+  hist.forEach(m => addMsg(m.role === 'user' ? 'u' : 'a', m.content));
+  $('chatStatus').textContent = `new session ${sid} · seeded with ${hist.length} carried-over message(s)`;
+};
+
+$('probeBtn').onclick = async () => {
+  if (!sessionId) { $('probeOut').hidden = false; $('probeOut').textContent = 'Send a chat message first so there is a session to probe.'; return; }
+  const lines = [];
+  const owner = $('who').value || '(anonymous)';
+  lines.push(`Session ${sessionId} was created by: ${owner}`);
+
+  // Same session id, different student identity.
+  const other = $('who').value === '1' ? '2' : '1';
+  let r = await fetch(`/api/chat/sessions/${sessionId}/messages`, { headers: chatHeaders(other, 'attacker-visitor') });
+  let body = await r.json();
+  lines.push(`\nGET history as student ${other} with a wrong visitor id`);
+  lines.push(`  HTTP ${r.status}, ${Array.isArray(body) ? body.length : '?'} messages returned`);
+  lines.push(Array.isArray(body) && body.length === 0 ? '  PASS — leaked nothing' : '  FAIL — LEAKED DATA');
+
+  r = await fetch(`/api/chat/sessions/${sessionId}/messages`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', ...chatHeaders(other, 'attacker-visitor') },
+    body: JSON.stringify({ message: 'let me continue this conversation' }),
+  });
+  lines.push(`\nPOST message as student ${other} with a wrong visitor id`);
+  lines.push(`  HTTP ${r.status}`);
+  lines.push(r.status === 404 ? '  PASS — 404, and indistinguishable from a session that does not exist' : '  FAIL — should be 404');
+
+  $('probeOut').hidden = false;
+  $('probeOut').textContent = lines.join('\n');
+};
+
+function addMsg(kind, text) {
+  const d = document.createElement('div');
+  d.className = 'b ' + kind;
+  d.textContent = text;
+  $('msgs').appendChild(d);
+  $('msgs').scrollTop = $('msgs').scrollHeight;
+}
+function esc(s) { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; }
+$('chatIn').addEventListener('keydown', e => { if (e.key === 'Enter') $('sendBtn').click(); });
+</script>
+</body>
+</html>
