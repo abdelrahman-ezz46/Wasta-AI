@@ -1,0 +1,229 @@
+/* Mobile-first, base styles target 360px and up. */
+
+.pendingCard {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1rem;
+  border-radius: 0.75rem;
+  background: var(--coach-pending-bg, #f4f4f5);
+  color: var(--coach-pending-fg, #52525b);
+  font-size: 0.875rem;
+}
+
+.spinner {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  animation: coach-spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes coach-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.25rem;
+  border-radius: 1rem;
+  background: var(--coach-card-bg, #ffffff);
+  border: 1px solid var(--coach-card-border, #e4e4e7);
+}
+
+.headline {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.assessment {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: var(--coach-body-fg, #3f3f46);
+}
+
+.sectionLabel {
+  margin: 0 0 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--coach-label-fg, #71717a);
+}
+
+.stepper {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.step {
+  display: flex;
+  gap: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--coach-card-border, #e4e4e7);
+}
+
+.step:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.stepNumber {
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background: var(--coach-accent-bg, #eef2ff);
+  color: var(--coach-accent-fg, #4338ca);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.stepBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-width: 0;
+}
+
+.stepFocus {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.stepActions {
+  margin: 0;
+  padding-left: 1.125rem;
+  font-size: 0.8125rem;
+  color: var(--coach-body-fg, #3f3f46);
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.stepCheckpoint {
+  margin: 0;
+  font-size: 0.75rem;
+  font-style: italic;
+  color: var(--coach-label-fg, #71717a);
+}
+
+.projectCard {
+  padding: 1rem;
+  border-radius: 0.75rem;
+  background: var(--coach-project-bg, #f0fdf4);
+  border: 1px solid var(--coach-project-border, #bbf7d0);
+}
+
+.projectTitle {
+  margin: 0 0 0.375rem;
+  font-size: 0.9375rem;
+  font-weight: 700;
+}
+
+.projectDescription {
+  margin: 0 0 0.625rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--coach-body-fg, #3f3f46);
+}
+
+.skillTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.skillTag {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 0.1875rem 0.5rem;
+  border-radius: 999px;
+  background: var(--coach-tag-bg, #dcfce7);
+  color: var(--coach-tag-fg, #166534);
+}
+
+.pullQuote {
+  margin: 0;
+  padding: 0.875rem 1rem;
+  border-left: 3px solid var(--coach-accent-fg, #4338ca);
+  font-size: 0.9375rem;
+  font-style: italic;
+  line-height: 1.5;
+}
+
+.disclaimer {
+  margin: 0;
+  font-size: 0.6875rem;
+  line-height: 1.4;
+  color: var(--coach-label-fg, #a1a1aa);
+}
+
+@media (prefers-color-scheme: dark) {
+  .pendingCard {
+    background: var(--coach-pending-bg, #27272a);
+    color: var(--coach-pending-fg, #d4d4d8);
+  }
+
+  .card {
+    background: var(--coach-card-bg, #18181b);
+    border-color: var(--coach-card-border, #3f3f46);
+  }
+
+  .assessment,
+  .stepActions,
+  .projectDescription {
+    color: var(--coach-body-fg, #d4d4d8);
+  }
+
+  .sectionLabel,
+  .stepCheckpoint {
+    color: var(--coach-label-fg, #a1a1aa);
+  }
+
+  .step {
+    border-color: var(--coach-card-border, #3f3f46);
+  }
+
+  .stepNumber {
+    background: var(--coach-accent-bg, #312e81);
+    color: var(--coach-accent-fg, #a5b4fc);
+  }
+
+  .projectCard {
+    background: var(--coach-project-bg, #052e16);
+    border-color: var(--coach-project-border, #166534);
+  }
+
+  .skillTag {
+    background: var(--coach-tag-bg, #14532d);
+    color: var(--coach-tag-fg, #bbf7d0);
+  }
+
+  .disclaimer {
+    color: var(--coach-label-fg, #71717a);
+  }
+}
+
+@media (min-width: 480px) {
+  .card {
+    padding: 1.5rem;
+    gap: 1.5rem;
+  }
+}
