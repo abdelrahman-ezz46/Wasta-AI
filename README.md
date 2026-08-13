@@ -18,6 +18,17 @@ dotnet run --project src/Wasta.DevHost
 No database and no API keys required — EF runs in memory and a fixture provider stands in for the
 model. See [src/Wasta.DevHost/README.md](src/Wasta.DevHost/README.md).
 
+### See it visually
+
+For demos and stakeholder reviews, there's a Streamlit preview that renders the real API responses:
+
+```bash
+dotnet run --project src/Wasta.DevHost     # terminal 1
+streamlit run streamlit/app.py             # terminal 2
+```
+
+See [streamlit/README.md](streamlit/README.md).
+
 ### Against real Postgres
 
 The in-memory provider ignores column types, so `jsonb` columns and unique indexes are never
@@ -42,6 +53,7 @@ The migration script is idempotent — the same command works on a fresh or exis
 | `src/Wasta.DevHost` | Runnable harness. Development only — refuses to start elsewhere |
 | `src/frontend/coach-card` | React results-page card |
 | `src/frontend/chat-widget` | React floating chat widget |
+| `streamlit/` | Visual preview app for demos (calls the real API) |
 | `docs/TESTING.md` | Acceptance checklist with current verified/blocked status |
 | `docs/KNOWLEDGE-BASE-QUESTIONNAIRE.md` | The questions a product owner must answer to unblock the chatbot |
 
