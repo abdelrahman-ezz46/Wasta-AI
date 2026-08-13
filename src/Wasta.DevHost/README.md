@@ -15,8 +15,7 @@ Then open the URL it prints. No database and no API keys are needed: EF runs in 
 ## Adding real AI keys
 
 ```bash
-dotnet user-secrets --project src/Wasta.DevHost set "Ai:Providers:groq:ApiKey" "<key>"
-dotnet user-secrets --project src/Wasta.DevHost set "Ai:Providers:groq:Model" "<model-id>"
+./scripts/set-ai-key.sh
 ```
 
 The chain is `[groq, gemini, dev]` and skips unconfigured providers, so a real key takes over
