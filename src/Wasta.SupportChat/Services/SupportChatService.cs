@@ -136,7 +136,7 @@ public class SupportChatService
         {
             var systemPrompt = await BuildSystemPromptAsync(session.StudentId, ct);
             completion = await _providerChain.CompleteWithMetadataAsync(
-                systemPrompt, turns, new AiCallOptions(_options.MaxTokens, _options.Temperature), ct);
+                systemPrompt, turns, new AiCallOptions(_options.MaxTokens, _options.Temperature, _options.Model), ct);
         }
         catch (Exception ex)
         {

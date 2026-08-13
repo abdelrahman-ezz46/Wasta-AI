@@ -108,7 +108,10 @@ public class CoachGenerationService
             try
             {
                 completion = await _providerChain.CompleteWithMetadataAsync(
-                    systemPrompt, [new AiChatTurn("user", userJson)], callOptions: null, ct);
+                    systemPrompt,
+                    [new AiChatTurn("user", userJson)],
+                    new AiCallOptions(Model: _coachOptions.Model),
+                    ct);
             }
             catch (Exception ex)
             {

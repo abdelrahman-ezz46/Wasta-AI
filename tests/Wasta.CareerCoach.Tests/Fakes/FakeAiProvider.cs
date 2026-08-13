@@ -34,6 +34,7 @@ public class FakeAiProvider : IAiProvider
     public Task<string> CompleteAsync(string systemPrompt, IReadOnlyList<AiChatTurn> turns, AiCallOptions? callOptions, CancellationToken ct)
     {
         CallCount++;
+        LastCallOptions = callOptions;
         LastUserJson = turns.LastOrDefault()?.Content;
         LastTurns = turns;
 
@@ -53,4 +54,6 @@ public class FakeAiProvider : IAiProvider
 
     public string? LastUserJson { get; private set; }
     public IReadOnlyList<AiChatTurn>? LastTurns { get; private set; }
+
+    public AiCallOptions? LastCallOptions { get; private set; }
 }

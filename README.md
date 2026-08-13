@@ -93,6 +93,25 @@ credential pattern is committed.
 `Ai:Enabled = false` disables both features cleanly from a single flag: plans go to `Skipped`,
 endpoints report `unavailable`, and the UI renders nothing. That is the launch-day escape hatch.
 
+### Choosing models
+
+Each feature can name its own model, because their needs are opposite:
+
+| | Runs | Needs | Suggested (Groq) |
+|---|---|---|---|
+| Career Coach | once per assessment | strict JSON matching a schema — a miss is rejected and retried | `llama-3.3-70b-versatile` |
+| Support chat | once per **message** | a few plain sentences; latency is user-visible | `llama-3.1-8b-instant` |
+
+```jsonc
+"Ai":          { "Providers": { "groq": { "Model": "llama-3.3-70b-versatile" } } },  // required default
+"CareerCoach": { "Model": "" },                  // empty = use the provider default
+"SupportChat": { "Model": "llama-3.1-8b-instant" }
+```
+
+The provider's own `Model` is still required — a feature override alone does not make a provider
+usable, so a missing base configuration is caught rather than silently half-working. Model IDs are
+deprecated without much notice; check the provider's console when wiring this up.
+
 ## Status
 
 84 tests passing, 0 warnings. **Not yet production-ready** — there is no production host, the

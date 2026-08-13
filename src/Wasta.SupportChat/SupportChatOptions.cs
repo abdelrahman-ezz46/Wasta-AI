@@ -12,6 +12,13 @@ public class SupportChatOptions
     public int MaxTokens { get; set; } = 500;
     public double Temperature { get; set; } = 0.3;
 
+    /// <summary>Optional model override. Unlike the Career Coach, chat runs on
+    /// every message and only has to produce a few plain sentences, so a
+    /// smaller and faster model is usually the better trade here - it is the
+    /// high-volume path, and latency is visible to the user. Null uses the
+    /// provider's configured default.</summary>
+    public string? Model { get; set; }
+
     /// <summary>How many prior turns (user + assistant messages combined) are sent
     /// as context. Keeps token usage and latency bounded on long conversations.</summary>
     public int MaxHistoryTurns { get; set; } = 12;

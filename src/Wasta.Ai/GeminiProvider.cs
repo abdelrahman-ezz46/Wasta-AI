@@ -35,7 +35,8 @@ public class GeminiProvider : IAiProvider
         var client = _httpClientFactory.CreateClient($"ai-{Name}");
         client.Timeout = TimeSpan.FromSeconds(_options.TimeoutSeconds);
 
-        var url = $"{config.BaseUrl.TrimEnd('/')}/{config.Model}:generateContent?key={Uri.EscapeDataString(config.ApiKey)}";
+        var model = callOptions?.Model ?? config.Model;
+        var url = $"{config.BaseUrl.TrimEnd('/')}/{model}:generateContent?key={Uri.EscapeDataString(config.ApiKey)}";
 
         using var request = new HttpRequestMessage(HttpMethod.Post, url);
         request.Content = JsonContent.Create(new GeminiRequest
